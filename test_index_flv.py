@@ -1,0 +1,2 @@
+from flvlib.scripts import index_flv
+index_flv.main()
