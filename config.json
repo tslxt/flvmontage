@@ -1,8 +1,12 @@
 {
-	"path" : "/Applications/MAMP/htdocs/video",
-	"dest_path" : "/Applications/MAMP/htdocs/replay",
-	"log" : "/Applications/MAMP/htdocs/log/flvmongtage.log",
+	"flvpath" : "/home/fangtian/video",
+	"recordpath" : "/home/fangtian/record",
+	"dest_path" : "/home/fangtian/replay",
+	"allow_server" : "114.244.223.196",
+	"sync_path" : "/home/fangtian/replay",
+	"sync_server" : "fangtian@10.51.75.244",
+	"log" : "/home/fangtian/logs/flvmongtage.log",
 	"version" : "0.1.0",
-	"host" : "192.168.1.100",
+	"host" : "101.200.240.208",
 	"port" : 9999
 }
