@@ -95,12 +95,13 @@ def startService():
 				    client.send('sync falsed')
 		else:
 			logger.debug("access not allow")
+			client.send('access not allow')
 			
 		client.close()
 
 def transportFilesByCourseId(course_id):
     src = config['dest_path'] + '/' + course_id
-    dest = config['sync_path'] + '/' + course_id
+    dest = config['sync_path']
     server_address = config['sync_server']
     return os.system('scp -r %s %s:%s' % (src, server_address, dest))
 
@@ -124,9 +125,9 @@ def montage_mp3(course_id, start_time, end_time):
 	print course_id, start_time, end_time
 
 	flvlist = getFlvListByCourseId(course_id)
-
+	print flvlist
 	if len(flvlist) > 0:
-		# print flvlist
+		print flvlist
 
 		flvlistdetail = getFlvsDuration(flvlist)
 
@@ -137,11 +138,11 @@ def montage_mp3(course_id, start_time, end_time):
 		preflylist = []
 		preflylist = verifytime(flvlistdetail,start_time,end_time)
 		print preflylist
-		cuted_flvs = cutflvs(preflylist, course_id)
+		cuted_flvs = cutflvs(preflylist, course_id, start_time, end_time)
     		if not cuted_flvs:
 			return False	
 		duration = count_duration(cuted_flvs)
-		replay_config = { 'duration' : duration, 'flvs' : cuted_flvs, 'course_id' : course_id, 'start_time' : start_time, 'end_time' : end_time}
+		replay_config = { 'duration' : duration, 'flvs' : cuted_flvs, 'course_id' : str(course_id), 'start_time' : start_time, 'end_time' : end_time}
 		save_config(replay_config, course_id)
 		return replay_config
 	else:
@@ -158,7 +159,7 @@ def getFlvListByCourseId(course_id):
 	flvlist = []
 	for flv in allfiles:
 		if course_id in flv:
-			if len(flv) > len(course_id) + 10:
+			if len(flv) == len(course_id) + 15:
 				flvlist.append(flv)
 	if len(flvlist) > 0:
 		flvlist.sort()
@@ -211,7 +212,7 @@ def verifytime(flvlistdetail, start_time, end_time):
 
 	return verifiedlist
 
-def cutflvs(preflylist, course_id):
+def cutflvs(preflylist, course_id, start_time, end_time):
 	try:
 		dest_path = config['dest_path'] + '/'+ str(course_id) + '/flv'
 		makedirs(dest_path)
@@ -283,7 +284,7 @@ def save_config(replay_config, course_id):
 	dest_path = config['dest_path'] + '/'+ str(course_id)
 	f_name = dest_path + '/' + 'replay.config'
 	f = open( f_name, 'w+')
-	f.write(str(replay_config))
+	f.write(json.dumps(replay_config))
 	f.close
 
 if __name__ == '__main__':
