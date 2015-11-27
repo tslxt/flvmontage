@@ -4,14 +4,15 @@ import os
 from optparse import OptionParser
 
 
-def search_flv(direction, courseid):
+def search_flv(direction, courseid, display=False):
 	errorMessage = []
 	allfiles = []
 	try:
 		allfiles = os.listdir(direction)
 	except Exception, (errno, strerror):
 		errorMessage.append([errno, strerror])
-		print errorMessage
+		if display:
+			print errorMessage
 		return (0, errorMessage)
 	
 	# print allfiles
@@ -25,13 +26,13 @@ def search_flv(direction, courseid):
 
 	if len(flvlist) == 0:
 		errorMessage.append([101, "No such flv files by given courseid"])
-
-	if len(errorMessage):
-		print errorMessage
+		if display:
+			print errorMessage
 		return (0, errorMessage)
 
-	for flv in flvlist:
-		print flv
+	if display:
+		for flv in flvlist:
+			print flv
 	# print len(flvlist)
 	return (1, flvlist)
 
@@ -76,7 +77,7 @@ def process_options():
 
 def search_flvs():
 	options, args = process_options()
-	return search_flv(options.direction, options.courseid)
+	return search_flv(options.direction, options.courseid, True)
 
 def main():
     try:
