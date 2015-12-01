@@ -1,19 +1,18 @@
 import sys
 import os
+import time
 
 from optparse import OptionParser
 
 
-def search_flv(direction, courseid, display=False):
-	errorMessage = []
+def search_flv(direction, courseid, date_time, display=False):
 	allfiles = []
 	try:
 		allfiles = os.listdir(direction)
 	except Exception, (errno, strerror):
-		errorMessage.append([errno, strerror])
 		if display:
-			print errorMessage
-		return (0, errorMessage)
+			print errno, strerror
+		return (errno, strerror)
 	
 	# print allfiles
 	# print len(allfiles)
@@ -22,19 +21,24 @@ def search_flv(direction, courseid, display=False):
 	for flv in allfiles:
 		if courseid in flv:
 			if len(flv) == len(courseid) + 15:
-				flvlist.append(flv)
-
+				if not date_time:
+					flvlist.append(flv)
+				else:
+					ctime = float(flv[flv.index("-") + 1:flv.index(".flv")])
+					if time.strftime("%Y-%m-%d", time.localtime(ctime)) == str(date_time):
+						flvlist.append(flv)
 	if len(flvlist) == 0:
-		errorMessage.append([101, "No such flv files by given courseid"])
 		if display:
-			print errorMessage
-		return (0, errorMessage)
+			print 101, "No such flv files by given courseid"
+		return (101, "No such flv files by given courseid")
+
+	flvlist.sort()
 
 	if display:
 		for flv in flvlist:
 			print flv
 	# print len(flvlist)
-	return (1, flvlist)
+	return (0, flvlist)
 
 
 def process_options():
@@ -48,6 +52,7 @@ def process_options():
                           version=version)
     parser.add_option("-d", "--direction", help="path of range")
     parser.add_option("-i", "--courseid", help="courseid of condition")
+    parser.add_option("-t", "--datetime", help="search by datetime")
     # parser.add_option("-v", "--verbose", action="count",
     #                   default=0, dest="verbosity",
     #                   help="be more verbose, each -v increases verbosity")
@@ -77,7 +82,10 @@ def process_options():
 
 def search_flvs():
 	options, args = process_options()
-	return search_flv(options.direction, options.courseid, True)
+	if(options.datetime):
+		return search_flv(options.direction, options.courseid, options.datetime, True)
+	else:
+		return search_flv(options.direction, options.courseid, None, True)
 
 def main():
     try:

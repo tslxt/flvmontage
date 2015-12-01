@@ -4,6 +4,7 @@ import time
 import os
 from os import makedirs
 import duration_flv
+import searchFlvById
 from shutil import copy
 import logging
 from flvlib.scripts import cut_flv
@@ -70,7 +71,8 @@ def startService():
 		client, addr = s.accept()
 		print 'Got connection from', addr, client 
 		# client.send('Thank you for connection')
-		if addr[0] == config['allow_server']:
+		# if addr[0] == config['allow_server']:
+		if allowServer(addr[0]):
 		    clientdata = json.loads(client.recv(1024))
 
 		    if(clientdata['action'] == 'montage') :
@@ -93,11 +95,44 @@ def startService():
 				    client.send('sync success')
 			    else:
 				    client.send('sync falsed')
+		    elif(clientdata['action'] == 'browser'):
+			    course_id = clientdata['data']['course_id']
+			    select_date = clientdata['data']['date']
+
+			    flvfiles = searchFlvById.search_flv(config['flvpath'], course_id, str(select_date))
+			    if not flvfiles[0] == 0:
+			    	client.send(json.dumps({'code':flvfiles[0], 'message':flvfiles[1]}))
+			    else:
+			    	flvlistdetail = []
+			    	try:
+			    		flvlistdetail = getFlvsDuration(flvfiles[1])
+			    	except Exception, (errno, strerror):
+			    		client.send(json.dumps({'code':errno, 'message':strerror}))
+			    	if len(flvlistdetail) == 0:
+			    		client.send(json.dumps({'code':102, 'message':'flvlistdetail array is empty'}))
+			    	else:
+						copybrowserflvs(flvlistdetail, course_id)
+						duration = count_duration(flvlistdetail)
+						start_time = flvlistdetail[0][1]
+						end_time = start_time + duration
+						replay_config = { 'duration' : duration, 'flvs' : flvlistdetail, 'course_id' : str(course_id), 'start_time' : start_time, 'end_time' : end_time}
+						save_config(replay_config, course_id, False)
+						client.send(json.dumps({'code':0, 'message':replay_config}))
+			    	
+			    
+
 		else:
-			logger.debug("access not allow")
-			client.send('access not allow')
+			errstr = "access not be allowed!"
+			logger.debug(errstr)
+			client.send(json.dumps({'code':1, 'message':errstr}))
 			
 		client.close()
+
+def allowServer(server):
+	for allowserver in config['allow_server']:
+		if allowserver == server:
+			return True
+	return False
 
 def transportFilesByCourseId(course_id):
     src = config['dest_path'] + '/' + course_id
@@ -171,7 +206,13 @@ def getFlvsDuration(flvlist):
 		flvdetail = []
 		flvdetail.append(str(flv))
 		flvdetail.append(int(getStartTime(flv)))
-		flvdetail.append(getFlvDuration(flv))
+
+		duration = getFlvDuration(flv)
+
+		if not duration:
+			continue;
+		else:
+			flvdetail.append(duration)
 
 		flvlistdetail.append(flvdetail)
 	return flvlistdetail
@@ -211,6 +252,20 @@ def verifytime(flvlistdetail, start_time, end_time):
 				verifiedlist.append(flv)
 
 	return verifiedlist
+
+def copybrowserflvs(flvlist, course_id):
+	dest_path = config['browser_path'] + '/'+ str(course_id) + '/flv'
+	try:
+		makedirs(dest_path)
+	except Exception, e:
+		logger.error("mkdir for browserflvs error! course_id is %s , code is %s", course_id, e)
+	for flv in flvlist:
+		src = config['flvpath'] + '/' + str(flv[0])
+		dest = dest_path + '/' + str(flv[0])
+		copy(src, dest)
+		retimestamp_flv.retimestamp_file_inplace(dest)
+		index_flv.index_file(dest)
+
 
 def cutflvs(preflylist, course_id, start_time, end_time):
 	try:
@@ -280,8 +335,11 @@ def count_duration(cuted_flvs):
 	else :
 		return cuted_flvs[len(cuted_flvs) -1][1] - cuted_flvs[0][1] + cuted_flvs[len(cuted_flvs) - 1][2]
 
-def save_config(replay_config, course_id):
-	dest_path = config['dest_path'] + '/'+ str(course_id)
+def save_config(replay_config, course_id, replay=True):
+	if replay:
+		dest_path = config['dest_path'] + '/'+ str(course_id)
+	else:
+		dest_path = config['browser_path'] + '/'+ str(course_id)
 	f_name = dest_path + '/' + 'replay.config'
 	f = open( f_name, 'w+')
 	f.write(json.dumps(replay_config))
